@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 15px;
+}
+
+.sidebar {
+  width: 130px;
+  position: fixed;
+  z-index: 1;
+  top: 20px;
+  right: 10px;
+  background: #eee;
+  overflow-x: hidden;
+  padding: 8px 0;
+}
+
+.main {
+  margin-right: 140px; /* Same width as the sidebar + left position in px */
+  padding: 0px 10px;
+}
+
+</style>
+<body>
+
+<h2>Stations</h2>
+
+
+<select id="from">
+    <option>From Station</option>
+</select>
+
+<select id="to">
+    <option>To  Station</option>
+</select>
+
+<button onclick="route()"> Show Route Details </button>
+
+
+<br>
+<br>
+<br>
+<br>
+<!-- 
+<p id="from_sel"></p>
+<p id="to_sel"></p> -->
+
+<table id="trip_details">
+</table>
+
+
+<div class="sidebar">
+</div>
+
+<div>Train arrives in <span id="time"></span> minutes!</div>
+
+
+<script>
+
+function loadStationsList(type) {
+  var array = <%= @stations.inspect.html_safe %>
+  var json_arr = JSON.parse(array)
+  var select = document.getElementById(type);
+  for(var i = 0; i < json_arr.length; i++) {
+    var opt = json_arr[i];
+    var el = document.createElement("option");
+    el.textContent = opt.name;
+    el.value = opt.abbr;
+    select.appendChild(el);
+  }
+}
+
+function loaders() {
+	loadStationsList("from");
+	loadStationsList("to");
+}
+
+window.onload = loaders;
+
+function route() {
+	var e = document.getElementById("from");
+	var from = e.options[e.selectedIndex].value;
+	var to_temp = document.getElementById("to");
+	var to = to_temp.options[to_temp.selectedIndex].value;
+
+
+	// document.getElementById("from_sel").innerHTML = from;
+	// document.getElementById("to_sel").innerHTML = to;
+
+	getRoutePlan(from, to);
+
+}
+
+function getRoutePlan(from, to) {
+	const Http = new XMLHttpRequest();
+	const url1 = `/bart/trips?source=${from}&dest=${to}`;
+	console.log(`url : ${url1}`)
+	Http.open("GET", url1);
+	Http.send();
+	var res = "";
+
+	Http.onreadystatechange = (e) => {
+		console.log(`Http.responseText : ${Http.responseText}`);
+		res = JSON.parse(Http.responseText);
+		console.log(`res length : ${res.length}`);
+		for(var i = 0; i < res.length; i++) {
+			var dep = res[i]['@origTimeMin'];
+    		var arr = res[i]['@destTimeMin'];
+    		var fare = `$${res[i]['fares']['fare'][0]['@amount']}`;
+    		createTable(arr, dep, fare);
+  		}
+  		// console.log(`res[0]['@origTimeMin'] : ${res[0]['@origTimeMin'].split(' ')[0]}`);
+		var time_in_hh_mm = res[0]['@origTimeMin'].split(' ')[0];
+		var secs = convert_to_sec(time_in_hh_mm);
+	    startTimer(secs);
+		// loadHeading();
+	}
+}
+
+function convert_to_sec(time_in_hh_mm) {
+	var h = parseInt(time_in_hh_mm.split(':')[0]);
+	var s = parseInt(time_in_hh_mm.split(':')[1]);
+	var res =  h*60+s;
+	return res;
+}
+
+function convert_time_to_24_hr (time12h) {
+	const [time, modifier] = time12h.split(' ');
+
+  let [hours, minutes] = time.split(':');
+
+  if (hours === '12') {
+    hours = '00';
+  }
+
+  if (modifier === 'PM') {
+    hours = parseInt(hours, 10) + 12;
+  }
+
+  return `${hours}:${minutes}`;
+}
+
+// source : https://stackoverflow.com/questions/20618355/the-simplest-possible-javascript-countdown-timer
+function startTimer(duration) {
+	console.log(`duration : ${duration}`);
+	var display = ddocument.getElementById("time");
+    var timer = duration, minutes, seconds;
+    setInterval(function () {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        display.textContent = minutes + ":" + seconds;
+
+        if (--timer < 0) {
+            timer = duration;
+        }
+    }, 1000);
+}
+
+function loadHeading() {
+  var table = document.getElementById("trip_details");
+  var row = table.insertRow(-1);
+
+	var cell1 = row.insertCell(0);
+	var cell2 = row.insertCell(1);
+	var cell3 = row.insertCell(2);
+
+	// Add some text to the new cells:
+	cell1.innerHTML = "<b> Arrival </b>";
+	cell2.innerHTML = "<b> Departure </b>";
+	cell3.innerHTML = "<b> Fare </b>";
+}
+
+function createTable(arr, dep, fare) {
+	console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+	var table = document.getElementById("trip_details");
+
+	// Create an empty <tr> element and add it to the 1st position of the table:
+	var row = table.insertRow(-1);
+
+	// Insert new cells (<td> elements) at the 1st and 2nd position of the "new" <tr> element:
+	var cell1 = row.insertCell(0);
+	var cell2 = row.insertCell(1);
+	var cell3 = row.insertCell(2);
+
+	// Add some text to the new cells:
+	cell1.innerHTML = arr;
+	cell2.innerHTML = dep;
+	cell3.innerHTML = fare;
+}
+
+
+
+
+</script>
+</body>
+</html> 
