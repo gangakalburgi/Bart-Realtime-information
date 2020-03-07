@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   get 'bart/stations'
   get 'bart/trips'
   get 'bart/station'
+  get 'bart/latlongs_for_two_stations'
+
 
 
   root 'bart#home'
